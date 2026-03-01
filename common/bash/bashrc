@@ -1,0 +1,92 @@
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+# history control
+shopt -s histappend
+HISTCONTROL=erasedups
+HISTSIZE=1000 # max history size per session
+HISTFILESIZE=10000 # max history file size
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+if [ "$color_prompt" = yes ]; then
+	if [[ -v TMUX ]]; then
+		PS1='\[\e[38;5;153;1m\][$?]> \[\e[0m\]'
+	else
+		PS1='\[\e[38;5;153;1m\][\h:\W]> \[\e[0m\]'
+	fi
+else
+	PS1='[\u@\h:\W]\$ '
+fi
+
+unset color_prompt
+
+# completion
+if ! shopt -oq posix; then
+	if [ -f /usr/share/bash-completion/bash_completion ]; then
+		. /usr/share/bash-completion/bash_completion
+	elif [ -f /etc/bash_completion ]; then
+		. /etc/bash_completion
+	fi
+fi
+
+### EXPORTS ###
+export PROMPT_COMMAND='history -a; history -n'
+
+# pick the best possible editor
+if which nvim &>/dev/null; then
+	export EDITOR=nvim
+elif which vim &>/dev/null; then
+	export EDITOR=vim
+elif which vi &>/dev/null; then
+	export EDITOR=vi
+fi
+
+
+### PATH ###
+function addToPath() {
+	[[ ! -d "$1" ]] && return
+	[[ $PATH == *"$1"* ]] && return
+	export PATH=$PATH:$1
+}
+
+addToPath "$HOME/.local/bin"
+
+unset -f addToPath
+
+
+### SOURCE ###
+function sourceFile() {
+	[[ ! -f "$1" ]] && return
+	source "$1"
+}
+
+sourceFile "$HOME/.config/bash/bash_aliases"
+# sourceFile "$HOME/.config/bash/bash_tmux.sh"
+
+unset -f sourceFile
+
+
+### EVAL ###
+# fzf
+if which fzf &>/dev/null; then
+	eval "$(fzf --bash)"
+fi
+
+# homebrew
+if [[ -f /opt/homebrew/bin/brew ]]; then
+	eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+# direnv
+if type direnv; then
+	eval "$(direnv hook bash)"
+fi
+
+bind "TAB:menu-complete"
